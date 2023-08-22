@@ -43,6 +43,7 @@ func UploadFile(c *gin.Context) {
 	var messageRes []string
 	var filepathRes []string
 	var codeRes []string
+	var fileIdRes []int
 
 	transId := uuid.New().String()
 	docTypeId, _ := strconv.Atoi(c.Param("docTypeId"))
@@ -72,22 +73,25 @@ func UploadFile(c *gin.Context) {
 			req.File = file
 			Filename := time.Now().Format("2006-01-02T15-04-05") + "-" + file.Filename
 			req.Filename = Filename
-			req.FinalPath, err = SaveFile(*req)
+			req.FinalPath, req.FileId, err = SaveFile(*req)
 
 			if err != nil {
 				messageRes = append(messageRes, "Upload File ["+file.Filename+"]: [Internal Server Error] "+err.Error())
 				filepathRes = append(filepathRes, "Error")
+				fileIdRes = append(fileIdRes, -1)
 				codeRes = append(codeRes, "500")
 				continue
 			}
 
 			messageRes = append(messageRes, "Upload File ["+file.Filename+"]: [Success]")
 			filepathRes = append(filepathRes, req.FinalPath)
+			fileIdRes = append(fileIdRes, req.FileId)
 			codeRes = append(codeRes, "200")
 
 		} else {
 			messageRes = append(messageRes, "Upload File ["+file.Filename+"]: [Bad Request Error] File is null or zero")
 			filepathRes = append(filepathRes, "Error")
+			fileIdRes = append(fileIdRes, -1)
 			codeRes = append(codeRes, "400")
 		}
 	}
@@ -105,18 +109,19 @@ func UploadFile(c *gin.Context) {
 		Message:       messageRes,
 		Code:          codeRes,
 		Filepath:      filepathRes,
+		FileId:        fileIdRes,
 	})
 }
 
 // func for save file
-func SaveFile(req _Domain.RequestUploadFile) (filePath string, err error) {
+func SaveFile(req _Domain.RequestUploadFile) (filePath string, fileId int, err error) {
 	Path := strconv.Itoa(req.DocTypeId) + "/" + strconv.Itoa(req.GroupId)
 	prefixPath := fmt.Sprintf("./FileSave/%s", Path)
 
 	if _, err := os.Stat(prefixPath); errors.Is(err, os.ErrNotExist) {
 		err := os.MkdirAll(prefixPath, os.ModePerm)
 		if err != nil {
-			return filePath, errors.New("Error Process Create File Path, " + err.Error())
+			return filePath, fileId, errors.New("Error Process Create File Path, " + err.Error())
 		}
 		err = nil
 	}
@@ -135,7 +140,7 @@ func SaveFile(req _Domain.RequestUploadFile) (filePath string, err error) {
 	}
 
 	if err != nil {
-		return filePath, errors.New("Error Process Open File, " + err.Error())
+		return filePath, fileId, errors.New("Error Process Open File, " + err.Error())
 	}
 
 	// Destination File
@@ -150,18 +155,18 @@ func SaveFile(req _Domain.RequestUploadFile) (filePath string, err error) {
 	}
 
 	if err != nil {
-		return filePath, errors.New("Error Process Create File, " + err.Error())
+		return filePath, fileId, errors.New("Error Process Create File, " + err.Error())
 	}
 
 	// Copy source file to destination file
 	_, err = io.Copy(dst, src)
 	if err != nil {
-		return filePath, errors.New("Error Process Copy File, " + err.Error())
+		return filePath, fileId, errors.New("Error Process Copy File, " + err.Error())
 	}
 
 	// Insert new record
 
-	_, err = _Usecase.UploadFile(req)
+	fileId, err = _Usecase.UploadFile(req)
 
 	if err != nil {
 		//remove that file record error
@@ -169,8 +174,8 @@ func SaveFile(req _Domain.RequestUploadFile) (filePath string, err error) {
 			_ = os.Remove(filePath)
 		}
 
-		return filePath, errors.New("Error Process Insert Upload File Record, " + err.Error())
+		return filePath, fileId, errors.New("Error Process Insert Upload File Record, " + err.Error())
 	}
 
-	return filePath, nil
+	return filePath, fileId, nil
 }

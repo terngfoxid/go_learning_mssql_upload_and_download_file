@@ -19,15 +19,11 @@ func GetUploadLists(req _Domain.RequestGetUploadLists) (res _Domain.ResponseGetU
 	return res, err
 }
 
-func UploadFile(req _Domain.RequestUploadFile) (res _Domain.Response, err error) {
-	res.TransactionId = req.TransactionId
-	res, err = _Repository.UploadFile(*&req)
+func UploadFile(req _Domain.RequestUploadFile) (fileId int, err error) {
+
+	fileId, err = _Repository.UploadFile(req)
 	if err != nil {
-		res.Message = err.Error()
-		res.Code = "500"
-		return res, err
+		return fileId, err
 	}
-	res.Message = "Ok"
-	res.Code = "200"
-	return res, err
+	return fileId, err
 }

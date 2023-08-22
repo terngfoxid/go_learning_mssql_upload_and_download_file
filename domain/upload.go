@@ -28,6 +28,7 @@ type RequestUploadFile struct {
 	TransactionId string
 	File          *multipart.FileHeader
 	Filename      string
+	FileId        int
 	DocTypeId     int
 	GroupId       int
 	FinalPath     string
@@ -63,6 +64,7 @@ type ResponseUploadFile struct {
 	Message       []string `json:"msg"`
 	Code          []string `json:"code"`
 	Filepath      []string `json:"filepath"`
+	FileId        []int    `json:"fileId"`
 }
 
 type ResponseInsertLog struct {

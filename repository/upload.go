@@ -21,27 +21,21 @@ func GetUploadLists() (res _Domain.ResponseGetUploadLists, err error) {
 	return res, err
 }
 
-func UploadFile(req _Domain.RequestUploadFile) (res _Domain.Response, err error) {
+func UploadFile(req _Domain.RequestUploadFile) (fileId int, err error) {
 	tsql := "insert_upload_record"
-
-	dbRes := new(_Domain.ResponseInsertLog)
 
 	result, err := Config.DB.Raw(tsql, req.DocTypeId, req.GroupId, req.Filename).Rows()
 	if err != nil {
-		res.Message = "Server can't insert record to DB"
-		res.Code = "500"
-		return res, err
+		return fileId, err
 	}
 
-	Config.DB.ScanRows(result, &dbRes.Id)
+	Config.DB.ScanRows(result, &fileId)
 
 	tsql = "insert_log"
-	_, err = Config.DB.Raw(tsql, req.TransactionId, "upload", dbRes.Id).Rows()
+	_, err = Config.DB.Raw(tsql, req.TransactionId, "upload", fileId).Rows()
 	if err != nil {
-		res.Message = "Server can't insert upload log to DB"
-		res.Code = "500"
-		return res, nil
+		return fileId, nil
 	}
 
-	return res, err
+	return fileId, err
 }
